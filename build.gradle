@@ -149,7 +149,7 @@ dependencies {
     testImplementation 'org.junit-pioneer:junit-pioneer:2.2.0'
 
 implementation 'org.springframework.boot:spring-boot-starter-security'
-mplementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 runtimeOnly 'org.postgresql:postgresql:42.7.4'
 implementation 'org.flywaydb:flyway-core'
 implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
