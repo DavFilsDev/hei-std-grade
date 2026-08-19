@@ -1,0 +1,1243 @@
+openapi: 3.0.1
+info:
+  title: hei-std-grade API
+  version: v0
+  description: >
+    Management of HEI student grades over 3 years (S1-S6), TN/EL tracks,
+    retakes, repeating years, asynchronous PDF transcripts, XLSX export of graduates.
+servers:
+  - url: http://localhost:8080
+    description: Local server
+
+tags:
+  - name: auth
+  - name: user
+  - name: role
+  - name: academic-track
+  - name: semester
+  - name: teaching-unit
+  - name: course
+  - name: class-group
+  - name: academic-year
+  - name: group-assignment
+  - name: teacher-assignment
+  - name: exam
+  - name: grade
+  - name: transcript
+  - name: diploma
+
+paths:
+
+  /login:
+    post:
+      tags: [auth]
+      operationId: login
+      description: "Authenticates an existing user (no self-registration: accounts are created by an ADMIN via PUT /users)."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginPayload'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserWithToken'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /roles:
+    get:
+      tags: [role]
+      operationId: getAllRoles
+      description: Static repository of the 3 roles. Public.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Role'
+
+  /users:
+    get:
+      tags: [user]
+      operationId: getAllUsers
+      description: Restricted to ADMIN.
+      parameters:
+        - name: role
+          in: query
+          required: false
+          description: Optional filter by role (e.g. TEACHER).
+          schema:
+            $ref: '#/components/schemas/RoleName'
+      responses:
+        '200':
+          description: OK (ADMIN)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '403':
+          description: Forbidden
+    put:
+      tags: [user]
+      operationId: crupdateUser
+      description: >
+        Creates or updates a user (student, teacher, or admin).
+        Restricted to ADMIN. Password is required only during creation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrupdateUserPayload'
+      responses:
+        '200':
+          description: OK (ADMIN)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Bad Request
+        '403':
+          description: Forbidden
+
+  /users/{userId}:
+    get:
+      tags: [user]
+      operationId: getUserById
+      description: ADMIN, or the user themselves.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+
+  /users/{userId}/track:
+    put:
+      tags: [user]
+      operationId: assignStudentTrack
+      description: >
+        Assigns the academic track (TN/EL) to a student. Single-use operation:
+        rejected if the student already has a non-null track_id (immutable once assigned).
+        Restricted to ADMIN.
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [trackId]
+              properties:
+                trackId:
+                  type: string
+      responses:
+        '200':
+          description: OK (ADMIN)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Bad Request (already assigned, or invalid trackId)
+        '403':
+          description: Forbidden
+
+  /academic-tracks:
+    get:
+      tags: [academic-track]
+      operationId: getAllAcademicTracks
+      description: Public (read-only).
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AcademicTrack'
+    put:
+      tags: [academic-track]
+      operationId: crupdateAcademicTrack
+      description: Restricted to ADMIN.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademicTrack'
+      responses:
+        '200':
+          description: OK (ADMIN)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicTrack'
+        '403':
+          description: Forbidden
+
+  /semesters:
+    get:
+      tags: [semester]
+      operationId: getAllSemesters
+      description: Public (read-only).
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Semester'
+    put:
+      tags: [semester]
+      operationId: crupdateSemester
+      description: Restricted to ADMIN.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Semester'
+      responses:
+        '200':
+          description: OK (ADMIN)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Semester'
+        '403':
+          description: Forbidden
+
+  /teaching-units:
+    get:
+      tags: [teaching-unit]
+      operationId: getAllTeachingUnits
+      description: Public (read-only).
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TeachingUnit'
+    put:
+      tags: [teaching-unit]
+      operationId: crupdateTeachingUnit
+      description: Restricted to ADMIN.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeachingUnit'
+      responses:
+        '200':
+          description: OK (ADMIN)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeachingUnit'
+        '400':
+          description: "Bad Request (e.g., TU credits inconsistent with the sum of courses)"
+        '403':
+          description: Forbidden
+
+  /teaching-units/{teachingUnitId}/courses:
+    get:
+      tags: [course]
+      operationId: getCoursesByTeachingUnit
+      description: Public (read-only).
+      parameters:
+        - name: teachingUnitId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Course'
+    put:
+      tags: [course]
+      operationId: crupdateCourse
+      description: "Restricted to ADMIN. teachingUnitId comes from path, ignored if provided in payload body."
+      parameters:
+        - name: teachingUnitId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Course'
+      responses:
+        '200':
+          description: OK (ADMIN)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+        '403':
+          description: Forbidden
+
+  /courses/{courseId}:
+    get:
+      tags: [course]
+      operationId: getCourseById
+      description: Public (read-only).
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+        '404':
+          description: Not Found
+
+  /courses/{courseId}/coefficient-status:
+    get:
+      tags: [course]
+      operationId: getCourseCoefficientStatus
+      description: >
+        Current sum of coefficients for REGULAR exams of the course for a given academic year,
+        and whether the course is finalized (sum == 1). Public (read-only).
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: academicYearId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseCoefficientStatus'
+
+  /class-groups:
+    get:
+      tags: [class-group]
+      operationId: getAllClassGroups
+      description: Restricted to ADMIN/TEACHER.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ClassGroup'
+        '403':
+          description: Forbidden
+    put:
+      tags: [class-group]
+      operationId: crupdateClassGroup
+      description: Restricted to ADMIN.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClassGroup'
+      responses:
+        '200':
+          description: OK (ADMIN)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClassGroup'
+        '403':
+          description: Forbidden
+
+  /academic-years:
+    get:
+      tags: [academic-year]
+      operationId: getAllAcademicYears
+      description: Public (read-only).
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AcademicYear'
+    put:
+      tags: [academic-year]
+      operationId: crupdateAcademicYear
+      description: Restricted to ADMIN.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcademicYear'
+      responses:
+        '200':
+          description: OK (ADMIN)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcademicYear'
+        '403':
+          description: Forbidden
+
+  /students/{studentId}/academic-years/{academicYearId}/group-assignment:
+    get:
+      tags: [group-assignment]
+      operationId: getStudentGroupAssignment
+      description: ADMIN/TEACHER, or the student themselves.
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: academicYearId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentGroupAssignment'
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+    put:
+      tags: [group-assignment]
+      operationId: crupdateStudentGroupAssignment
+      description: Restricted to ADMIN. A student belongs to a single group per year (can change from year to year, historical records kept).
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: academicYearId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [groupId]
+              properties:
+                groupId:
+                  type: string
+      responses:
+        '200':
+          description: OK (ADMIN)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudentGroupAssignment'
+        '403':
+          description: Forbidden
+
+  /academic-years/{academicYearId}/groups/{groupId}/students:
+    get:
+      tags: [group-assignment]
+      operationId: getStudentsByGroupAndYear
+      description: "Group roster for a year. Restricted to ADMIN/TEACHER."
+      parameters:
+        - name: academicYearId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK (ADMIN, TEACHER)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '403':
+          description: Forbidden
+
+  /courses/{courseId}/academic-years/{academicYearId}/teachers:
+    get:
+      tags: [teacher-assignment]
+      operationId: getTeachersByCourseAndYear
+      description: Public (read-only).
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: academicYearId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+    put:
+      tags: [teacher-assignment]
+      operationId: assignTeacherToCourse
+      description: "Assigns a teacher to a course for a year (a course can have multiple teachers). Restricted to ADMIN."
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: academicYearId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [teacherId]
+              properties:
+                teacherId:
+                  type: string
+      responses:
+        '200':
+          description: OK (ADMIN)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeacherCourseAssignment'
+        '403':
+          description: Forbidden
+
+  /teachers/{teacherId}/academic-years/{academicYearId}/courses:
+    get:
+      tags: [teacher-assignment]
+      operationId: getCoursesByTeacherAndYear
+      description: "Courses assigned to a teacher for a year. ADMIN, or the teacher themselves."
+      parameters:
+        - name: teacherId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: academicYearId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Course'
+        '403':
+          description: Forbidden
+
+  /courses/{courseId}/academic-years/{academicYearId}/exams:
+    get:
+      tags: [exam]
+      operationId: getExamsByCourseAndYear
+      description: Public (read-only).
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: academicYearId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Exam'
+    put:
+      tags: [exam]
+      operationId: crupdateExam
+      description: >
+        Restricted to ADMIN, or TEACHER assigned to this course for this year
+        (verified via teacher_course_assignment). courseId/academicYearId come
+        from path. coefficient mandatory if sessionType=REGULAR, otherwise ignored.
+      parameters:
+        - name: courseId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: academicYearId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Exam'
+      responses:
+        '200':
+          description: OK (ADMIN, assigned TEACHER)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Exam'
+        '400':
+          description: Bad Request
+        '403':
+          description: "Forbidden (TEACHER not assigned to this course)"
+
+  /exams/{examId}:
+    get:
+      tags: [exam]
+      operationId: getExamById
+      description: Public (read-only).
+      parameters:
+        - name: examId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Exam'
+        '404':
+          description: Not Found
+
+  /grades:
+    put:
+      tags: [grade]
+      operationId: crupdateGrade
+      description: >
+        Creates a grade. Restricted to ADMIN, or TEACHER assigned to the course of the relevant exam.
+        To correct an existing grade, use PATCH /grades/{gradeId} (requires a mandatory reason, which is logged in history).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Grade'
+      responses:
+        '200':
+          description: OK (ADMIN, assigned TEACHER)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Grade'
+        '400':
+          description: Bad Request
+        '403':
+          description: Forbidden
+
+  /grades/{gradeId}:
+    patch:
+      tags: [grade]
+      operationId: correctGrade
+      description: >
+        Corrects an existing grade (claim, entry error). The reason is mandatory
+        and creates an entry in the history log.
+        Restricted to ADMIN, or TEACHER assigned to the relevant course.
+      parameters:
+        - name: gradeId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CorrectGradePayload'
+      responses:
+        '200':
+          description: OK (ADMIN, assigned TEACHER)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Grade'
+        '400':
+          description: "Bad Request (missing reason)"
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+
+  /grades/{gradeId}/history:
+    get:
+      tags: [grade]
+      operationId: getGradeHistory
+      description: Restricted to ADMIN, or TEACHER assigned to the relevant course.
+      parameters:
+        - name: gradeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK (ADMIN, assigned TEACHER)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GradeHistoryEntry'
+        '403':
+          description: Forbidden
+
+  /students/{studentId}/grades:
+    get:
+      tags: [grade]
+      operationId: getStudentGrades
+      description: "All grades for a student across all courses/years. ADMIN/TEACHER, or the student themselves."
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Grade'
+        '403':
+          description: Forbidden
+
+  /students/{studentId}/academic-years/{academicYearId}/transcript-summary:
+    get:
+      tags: [transcript]
+      operationId: getTranscriptSummary
+      description: >
+        On-the-fly calculation (no persistence): general overall average for the year,
+        credits earned, PROVISIONAL/DEFINITIVE status. ADMIN, or the student themselves.
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: academicYearId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranscriptSummary'
+        '403':
+          description: Forbidden
+
+  /students/{studentId}/academic-years/{academicYearId}/transcript-requests:
+    post:
+      tags: [transcript]
+      operationId: requestTranscriptGeneration
+      description: >
+        Triggers asynchronous PDF transcript generation (S3 upload + email delivery via POJA mailer).
+        Returns immediately without waiting for processing completion.
+        ADMIN, or the student themselves (for their own transcript).
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: academicYearId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '202':
+          description: Accepted (asynchronous processing initiated)
+        '403':
+          description: Forbidden
+
+  /promotions:
+    get:
+      tags: [diploma]
+      operationId: getAllPromotions
+      description: "List of distinct promotions (entry years), derived from entrance_date. Restricted to ADMIN/TEACHER."
+      responses:
+        '200':
+          description: OK (ADMIN, TEACHER)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: integer
+        '403':
+          description: Forbidden
+
+  /promotions/{promotionYear}/graduates:
+    get:
+      tags: [diploma]
+      operationId: getGraduatesByPromotion
+      description: "JSON list of graduates for a promotion, sorted by rank. Restricted to ADMIN."
+      parameters:
+        - name: promotionYear
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK (ADMIN)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GraduateEntry'
+        '403':
+          description: Forbidden
+
+  /promotions/{promotionYear}/graduates.xlsx:
+    get:
+      tags: [diploma]
+      operationId: downloadGraduatesXlsx
+      description: "Direct download of XLSX file (rank, STD, last name, first name, general average). Restricted to ADMIN."
+      parameters:
+        - name: promotionYear
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK (ADMIN) - binary xlsx file
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        '403':
+          description: Forbidden
+
+  /students/{studentId}/diploma-status:
+    get:
+      tags: [diploma]
+      operationId: getStudentDiplomaStatus
+      description: "ADMIN, or the student themselves."
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  diplomed:
+                    type: boolean
+        '403':
+          description: Forbidden
+
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        type:
+          type: string
+
+    RoleName:
+      type: string
+      enum: [ROLE_STUDENT, ROLE_TEACHER, ROLE_ADMIN]
+
+    Role:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          $ref: '#/components/schemas/RoleName'
+
+    LoginPayload:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        ref:
+          type: string
+          description: "Student ID, e.g., STD24190"
+        lastName:
+          type: string
+        firstName:
+          type: string
+        email:
+          type: string
+        isEnabled:
+          type: boolean
+        entranceDate:
+          type: string
+          format: date
+        trackId:
+          type: string
+          nullable: true
+          description: "NULL as long as the student is in core curriculum (L1)"
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoleName'
+
+    CrupdateUserPayload:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          properties:
+            password:
+              type: string
+              description: "Required at creation only. Never returned on read operations."
+
+    UserWithToken:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          properties:
+            token:
+              type: string
+
+    AcademicTrack:
+      type: object
+      required: [id, code, name]
+      properties:
+        id:
+          type: string
+        code:
+          type: string
+          enum: [TN, EL]
+        name:
+          type: string
+
+    Semester:
+      type: object
+      required: [id, code, position]
+      properties:
+        id:
+          type: string
+        code:
+          type: string
+          enum: [S1, S2, S3, S4, S5, S6]
+        position:
+          type: integer
+          minimum: 1
+          maximum: 6
+        totalCredits:
+          type: integer
+          default: 30
+
+    TeachingUnit:
+      type: object
+      required: [id, code, title, semesterId, credits]
+      properties:
+        id:
+          type: string
+        code:
+          type: string
+        title:
+          type: string
+        semesterId:
+          type: string
+        credits:
+          type: integer
+
+    Course:
+      type: object
+      required: [id, ref, title, credits, teachingUnitId]
+      properties:
+        id:
+          type: string
+        ref:
+          type: string
+        title:
+          type: string
+        credits:
+          type: integer
+        teachingUnitId:
+          type: string
+        trackId:
+          type: string
+          nullable: true
+          description: "NULL = course common to both tracks"
+
+    CourseCoefficientStatus:
+      type: object
+      properties:
+        courseId:
+          type: string
+        academicYearId:
+          type: string
+        currentSum:
+          type: number
+          format: double
+        isComplete:
+          type: boolean
+
+    ClassGroup:
+      type: object
+      required: [id, ref]
+      properties:
+        id:
+          type: string
+        ref:
+          type: string
+
+    AcademicYear:
+      type: object
+      required: [id, label, startYear]
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+          description: "e.g., '2024-2025'"
+        startYear:
+          type: integer
+          description: "e.g., 2024 - used to sort attempts (repeating years)"
+
+    StudentGroupAssignment:
+      type: object
+      properties:
+        studentId:
+          type: string
+        groupId:
+          type: string
+        academicYearId:
+          type: string
+
+    TeacherCourseAssignment:
+      type: object
+      properties:
+        teacherId:
+          type: string
+        courseId:
+          type: string
+        academicYearId:
+          type: string
+
+    Exam:
+      type: object
+      required: [id, examDate, sessionType, courseId, academicYearId]
+      properties:
+        id:
+          type: string
+        examDate:
+          type: string
+          format: date-time
+        coefficient:
+          type: number
+          format: double
+          nullable: true
+          description: "Mandatory if sessionType=REGULAR, ignored if RETAKE"
+        sessionType:
+          type: string
+          enum: [REGULAR, RETAKE]
+        courseId:
+          type: string
+        academicYearId:
+          type: string
+
+    Grade:
+      type: object
+      required: [id, studentId, examId, score]
+      properties:
+        id:
+          type: string
+        studentId:
+          type: string
+        examId:
+          type: string
+        score:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 20
+
+    CorrectGradePayload:
+      type: object
+      required: [score, reason]
+      properties:
+        score:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 20
+        reason:
+          type: string
+          description: "Mandatory: claim, entry error, etc."
+
+    GradeHistoryEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        gradeId:
+          type: string
+        oldScore:
+          type: number
+          format: double
+        newScore:
+          type: number
+          format: double
+        reason:
+          type: string
+        updatedBy:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+
+    TranscriptSummary:
+      type: object
+      properties:
+        studentId:
+          type: string
+        academicYearId:
+          type: string
+        status:
+          type: string
+          enum: [PROVISIONAL, DEFINITIVE]
+        average:
+          type: number
+          format: double
+        creditsEarned:
+          type: integer
+
+    GraduateEntry:
+      type: object
+      properties:
+        rank:
+          type: integer
+        std:
+          type: string
+        lastName:
+          type: string
+        firstName:
+          type: string
+        average:
+          type: number
+          format: double
