@@ -6,4 +6,6 @@ import school.hei.stdgrade.repository.model.JExam;
 
 public interface JExamRepository extends JpaRepository<JExam, String> {
   List<JExam> findByCourseIdAndAcademicYearId(String courseId, String academicYearId);
+
+  List<JExam> findByCourseId(String courseId);
 }

@@ -6,4 +6,6 @@ import school.hei.stdgrade.repository.model.JGrade;
 
 public interface JGradeRepository extends JpaRepository<JGrade, String> {
   List<JGrade> findByStudentId(String studentId);
+
+  List<JGrade> findByStudentIdAndExamIdIn(String studentId, List<String> examIds);
 }

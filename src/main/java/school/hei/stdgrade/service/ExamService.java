@@ -9,6 +9,7 @@ import school.hei.stdgrade.model.Exam;
 import school.hei.stdgrade.repository.JExamRepository;
 import school.hei.stdgrade.repository.JTeacherCourseAssignmentRepository;
 import school.hei.stdgrade.repository.mapper.JExamMapper;
+import school.hei.stdgrade.repository.model.JExam;
 import school.hei.stdgrade.security.model.Principal;
 import school.hei.stdgrade.security.model.UserRole;
 import school.hei.stdgrade.service.validator.CrupdateExamValidator;
@@ -49,5 +50,23 @@ public class ExamService {
 
     var entity = jMapper.toEntity(toSave);
     return jMapper.toDomain(jRepository.save(entity));
+  }
+
+  public boolean isCourseFinalized(String courseId, String academicYearId) {
+    List<JExam> regularExams =
+        jRepository.findByCourseIdAndAcademicYearId(courseId, academicYearId).stream()
+            .filter(exam -> "REGULAR".equals(exam.getSessionType()))
+            .toList();
+
+    if (regularExams.isEmpty()) {
+      return false;
+    }
+
+    double sum =
+        regularExams.stream()
+            .mapToDouble(exam -> exam.getCoefficient() != null ? exam.getCoefficient() : 0.0)
+            .sum();
+
+    return Math.abs(sum - 1.0) < 0.0001;
   }
 }
