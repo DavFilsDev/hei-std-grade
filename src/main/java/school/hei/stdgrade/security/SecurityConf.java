@@ -1,6 +1,11 @@
 package school.hei.stdgrade.security;
 
+import static org.springframework.http.HttpMethod.GET;
+import static org.springframework.http.HttpMethod.PATCH;
+import static org.springframework.http.HttpMethod.PUT;
 import static org.springframework.security.config.http.SessionCreationPolicy.STATELESS;
+import static school.hei.stdgrade.security.model.UserRole.ADMIN;
+import static school.hei.stdgrade.security.model.UserRole.TEACHER;
 
 import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -19,12 +24,6 @@ import school.hei.stdgrade.security.exception.RestAccessDeniedHandler;
 import school.hei.stdgrade.security.exception.RestAuthenticationEntryPoint;
 import school.hei.stdgrade.security.filter.BearerAuthFilter;
 
-/**
- * Skeleton only (Task 0) — the two matcher methods below are filled independently by Dev 1
- * (identity & academic structure) and Dev 2 (grades & transcript), see 05-repartition-taches.md §4.
- * Each dev edits only the body of their own method, so Git never sees a conflict on the same lines
- * here.
- */
 @Configuration
 @EnableWebSecurity
 @AllArgsConstructor
@@ -68,10 +67,17 @@ public class SecurityConf {
     // TODO(Dev 1): add requestMatchers(...) rules here.
   }
 
-  /** Dev 2 (Task 2.1/2.3/2.4): exams, grades, transcript, promotions/diploma. */
   private void gradesAndTranscriptMatchers(
       AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry auth,
       AuthorizationManager<RequestAuthorizationContext> selfAuthorizationManager) {
-    // TODO(Dev 2): add requestMatchers(...) rules here.
+    auth.requestMatchers(GET, "/courses/{courseId}/academic-years/{academicYearId}/exams")
+        .permitAll();
+    auth.requestMatchers(PUT, "/courses/{courseId}/academic-years/{academicYearId}/exams")
+        .hasAnyRole(TEACHER.name(), ADMIN.name());
+    auth.requestMatchers(GET, "/exams/{examId}").permitAll();
+    auth.requestMatchers(PUT, "/grades").hasAnyRole(TEACHER.name(), ADMIN.name());
+    auth.requestMatchers(PATCH, "/grades/{gradeId}").hasAnyRole(TEACHER.name(), ADMIN.name());
+    auth.requestMatchers(GET, "/grades/{gradeId}/history").hasAnyRole(TEACHER.name(), ADMIN.name());
+    auth.requestMatchers(GET, "/students/{studentId}/grades").access(selfAuthorizationManager);
   }
 }

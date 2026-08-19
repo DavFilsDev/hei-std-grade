@@ -5,6 +5,8 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import lombok.AllArgsConstructor;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpHeaders;
+import school.hei.stdgrade.model.LoginPayload;
+import school.hei.stdgrade.model.UserWithToken;
 
 // URLs and payload/response types below are placeholders until doc/api.yml is merged (Task 0 -
 // Personne 2); UserWithToken/LoginPayload references are added once the OpenAPI-generated (or
@@ -65,8 +67,14 @@ public class TestUtils {
 
   private final TestRestTemplate testRestTemplate;
 
-  // login()/tokenOf() are finalized once UserWithToken/LoginPayload exist (Task 1.1), right
-  // after Task 0 - Personne 2's doc/api.yml is merged (see 05-repartition-taches.md, "Tâche 0").
+  public UserWithToken login(String email) {
+    return testRestTemplate.postForObject(
+        LOGIN_URL, new LoginPayload(email, SEEDED_PASSWORD), UserWithToken.class);
+  }
+
+  public String tokenOf(String email) {
+    return login(email).token();
+  }
 
   public static HttpHeaders authHeaders(String token) {
     var headers = jsonHeaders();

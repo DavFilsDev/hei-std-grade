@@ -6,7 +6,7 @@ import school.hei.stdgrade.repository.model.JTeacherCourseAssignmentId;
 
 public interface JTeacherCourseAssignmentRepository
     extends JpaRepository<JTeacherCourseAssignment, JTeacherCourseAssignmentId> {
-  // Task 2.1 (GradeService) adds the RBAC-checking finder here, e.g.:
-  // boolean existsByIdTeacherIdAndIdCourseIdAndIdAcademicYearId(
-  //     String teacherId, String courseId, String academicYearId);
+
+  boolean existsByIdTeacherIdAndIdCourseIdAndIdAcademicYearId(
+      String teacherId, String courseId, String academicYearId);
 }
