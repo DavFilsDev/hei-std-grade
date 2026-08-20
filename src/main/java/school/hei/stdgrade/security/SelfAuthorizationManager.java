@@ -24,7 +24,7 @@ public class SelfAuthorizationManager implements AuthorizationManager<RequestAut
       return new AuthorizationDecision(false);
     }
 
-    var uid = context.getVariables().get("uid");
+    var uid = context.getVariables().get("userId");
     var isStaff = principal.roles().contains(TEACHER) || principal.roles().contains(ADMIN);
     var isSelf = uid != null && uid.equals(principal.user().id());
 

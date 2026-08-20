@@ -2,12 +2,17 @@ package school.hei.stdgrade.repository.mapper;
 
 import java.util.List;
 import org.springframework.stereotype.Component;
+import school.hei.stdgrade.model.RoleName;
 import school.hei.stdgrade.model.User;
 import school.hei.stdgrade.repository.model.JUser;
 
 @Component
 public class JUserMapper {
   public User toDomain(JUser entity) {
+    return toDomain(entity, List.of());
+  }
+
+  public User toDomain(JUser entity, List<RoleName> roles) {
     return new User(
         entity.getId(),
         entity.getRef(),
@@ -18,7 +23,7 @@ public class JUserMapper {
         entity.isEnabled(),
         entity.getEntranceDate(),
         entity.getTrackId(),
-        List.of());
+        roles);
   }
 
   public JUser toEntity(User domain) {

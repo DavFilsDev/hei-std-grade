@@ -57,14 +57,19 @@ public class SecurityConf {
         .build();
   }
 
-  /**
-   * Dev 1 (Task 1.1/1.2/1.3): users, tracks, semesters, teaching-units, courses, class-groups,
-   * academic-years, group-assignment, teacher-assignment.
-   */
   private void identityAndAcademicStructureMatchers(
       AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry auth,
       AuthorizationManager<RequestAuthorizationContext> selfAuthorizationManager) {
-    // TODO(Dev 1): add requestMatchers(...) rules here.
+
+    auth.requestMatchers(GET, "/roles").permitAll();
+
+    auth.requestMatchers(PUT, "/users").hasRole(ADMIN.name());
+
+    auth.requestMatchers(PUT, "/users/{userId}/track").hasRole(ADMIN.name());
+
+    auth.requestMatchers(GET, "/users").hasRole(ADMIN.name());
+
+    auth.requestMatchers(GET, "/users/{userId}").access(selfAuthorizationManager);
   }
 
   private void gradesAndTranscriptMatchers(

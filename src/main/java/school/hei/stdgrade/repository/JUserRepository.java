@@ -10,4 +10,8 @@ public interface JUserRepository extends JpaRepository<JUser, String> {
   boolean existsByEmail(String email);
 
   boolean existsByRef(String ref);
+
+  boolean existsByEmailAndIdNot(String email, String id);
+
+  boolean existsByRefAndIdNot(String ref, String id);
 }
