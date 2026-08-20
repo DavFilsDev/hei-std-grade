@@ -1,5 +1,6 @@
 package school.hei.stdgrade.security;
 
+import static org.reflections.Reflections.log;
 import static org.springframework.http.HttpMethod.GET;
 import static org.springframework.http.HttpMethod.PATCH;
 import static org.springframework.http.HttpMethod.POST;
@@ -41,6 +42,7 @@ public class SecurityConf {
   @Bean
   @Order(1)
   public SecurityFilterChain webFilterChain(HttpSecurity http) throws Exception {
+    log.info("=== Configuring webFilterChain for /web/** ===");
     return http.securityMatcher("/web/**")
         .authorizeHttpRequests(
             auth ->
@@ -60,6 +62,7 @@ public class SecurityConf {
       BearerAuthFilter bearerAuthFilter,
       SelfAuthorizationManager selfAuthorizationManager)
       throws Exception {
+    log.info("=== Configuring apiFilterChain for /** (rest) ===");
     return http.securityMatcher("/**")
         .csrf(AbstractHttpConfigurer::disable)
         .sessionManagement(sm -> sm.sessionCreationPolicy(STATELESS))

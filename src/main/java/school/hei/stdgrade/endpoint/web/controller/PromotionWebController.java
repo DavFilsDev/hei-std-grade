@@ -1,6 +1,7 @@
 package school.hei.stdgrade.endpoint.web.controller;
 
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -13,27 +14,43 @@ import school.hei.stdgrade.service.DiplomaService;
 
 @Controller
 @AllArgsConstructor
+@Slf4j
 public class PromotionWebController {
   private final DiplomaService diplomaService;
   private final GraduatesXlsxGenerator xlsxGenerator;
 
   @GetMapping("/web/promotions")
   public String listPromotions(Model model) {
-    model.addAttribute("promotions", diplomaService.getAllPromotions());
+    log.info("=== /web/promotions requested, fetching promotions ===");
+    try {
+      var promotions = diplomaService.getAllPromotions();
+      log.info("Promotions found: {}", promotions);
+      model.addAttribute("promotions", promotions);
+    } catch (Exception e) {
+      log.error("Error fetching promotions: ", e);
+      throw e;
+    }
     return "promotions";
   }
 
   @GetMapping("/web/promotions/{promotionYear}/graduates.xlsx")
   public ResponseEntity<byte[]> downloadGraduatesXlsx(@PathVariable int promotionYear) {
-    var graduates = diplomaService.getGraduatesByPromotion(promotionYear);
-    var content = xlsxGenerator.generate(graduates);
-    var filename = "diplomes-promotion-" + promotionYear + ".xlsx";
+    log.info("=== /web/promotions/{}/graduates.xlsx requested ===", promotionYear);
+    try {
+      var graduates = diplomaService.getGraduatesByPromotion(promotionYear);
+      log.info("Graduates count: {}", graduates.size());
+      var content = xlsxGenerator.generate(graduates);
+      var filename = "diplomes-promotion-" + promotionYear + ".xlsx";
 
-    return ResponseEntity.ok()
-        .contentType(
-            MediaType.parseMediaType(
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-        .body(content);
+      return ResponseEntity.ok()
+          .contentType(
+              MediaType.parseMediaType(
+                  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+          .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+          .body(content);
+    } catch (Exception e) {
+      log.error("Error generating XLSX for promotion {}: ", promotionYear, e);
+      throw e;
+    }
   }
 }
