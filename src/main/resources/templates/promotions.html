@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>Promotions — hei-std-grade</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}" />
+</head>
+<body>
+<header>
+    <h1>Promotions</h1>
+</header>
+
+<main>
+    <table>
+        <thead>
+        <tr>
+            <th>Promotion</th>
+            <th>Liste des diplômés</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="year : ${promotions}">
+            <td th:text="${year}">2024</td>
+            <td>
+                <a th:href="@{/web/promotions/{year}/graduates.xlsx(year=${year})}">
+                    Télécharger la liste des diplômés (.xlsx)
+                </a>
+            </td>
+        </tr>
+        <tr th:if="${#lists.isEmpty(promotions)}">
+            <td colspan="2">Aucune promotion pour le moment.</td>
+        </tr>
+        </tbody>
+    </table>
+</main>
+</body>
+</html>

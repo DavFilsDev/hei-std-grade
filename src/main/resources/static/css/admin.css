@@ -1,0 +1,28 @@
+body {
+  font-family: system-ui, sans-serif;
+  margin: 2rem;
+  color: #1a1a1a;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 640px;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #ddd;
+}
+
+form label {
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+form input {
+  display: block;
+  margin-top: 0.25rem;
+}
