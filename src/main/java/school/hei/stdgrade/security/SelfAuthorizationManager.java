@@ -23,14 +23,25 @@ public class SelfAuthorizationManager implements AuthorizationManager<RequestAut
       return new AuthorizationDecision(false);
     }
 
-    var uid = context.getVariables().get("userId");
-    if (uid == null) {
-      uid = context.getVariables().get("studentId");
+    if (principal.roles().contains(ADMIN)) {
+      return new AuthorizationDecision(true);
     }
 
-    var isStaff = principal.roles().contains(TEACHER) || principal.roles().contains(ADMIN);
-    var isSelf = uid != null && uid.equals(principal.user().id());
+    if (principal.roles().contains(TEACHER)) {
+      return new AuthorizationDecision(true);
+    }
 
-    return new AuthorizationDecision(isStaff || isSelf);
+    var variables = context.getVariables();
+    var targetId = variables.get("userId");
+    if (targetId == null) {
+      targetId = variables.get("studentId");
+    }
+    if (targetId == null) {
+      targetId = variables.get("teacherId");
+    }
+
+    var isSelf = targetId != null && targetId.equals(principal.user().id());
+
+    return new AuthorizationDecision(isSelf);
   }
 }

@@ -1,6 +1,6 @@
 package school.hei.stdgrade.security;
 
-import static org.reflections.Reflections.log;
+import static org.springframework.http.HttpMethod.DELETE;
 import static org.springframework.http.HttpMethod.GET;
 import static org.springframework.http.HttpMethod.PATCH;
 import static org.springframework.http.HttpMethod.POST;
@@ -34,6 +34,7 @@ import school.hei.stdgrade.security.filter.BearerAuthFilter;
 @AllArgsConstructor
 @Slf4j
 public class SecurityConf {
+
   private final RestAuthenticationEntryPoint entryPoint;
   private final RestAccessDeniedHandler accessDeniedHandler;
 
@@ -83,9 +84,12 @@ public class SecurityConf {
             auth -> {
               auth.requestMatchers("/error").permitAll();
               auth.requestMatchers("/login", "/ping").permitAll();
-              auth.requestMatchers(GET, "/css/**").permitAll(); // static assets for /web/** pages
-              identityAndAcademicStructureMatchers(auth, selfAuthorizationManager); // Dev 1
-              gradesAndTranscriptMatchers(auth, selfAuthorizationManager); // Dev 2
+              auth.requestMatchers(GET, "/css/**").permitAll();
+              identityAndAcademicStructureMatchers(auth, selfAuthorizationManager);
+              gradesAndTranscriptMatchers(auth, selfAuthorizationManager);
+
+              identityAndAcademicStructureMatchers(auth, selfAuthorizationManager);
+              gradesAndTranscriptMatchers(auth, selfAuthorizationManager);
               auth.anyRequest().authenticated();
             })
         .addFilterBefore(bearerAuthFilter, UsernamePasswordAuthenticationFilter.class)
@@ -98,23 +102,70 @@ public class SecurityConf {
 
     auth.requestMatchers(GET, "/roles").permitAll();
 
+    auth.requestMatchers(GET, "/users").hasRole(ADMIN.name());
+    auth.requestMatchers(GET, "/users/{userId}").access(selfAuthorizationManager);
     auth.requestMatchers(PUT, "/users").hasRole(ADMIN.name());
-
     auth.requestMatchers(PUT, "/users/{userId}/track").hasRole(ADMIN.name());
 
-    auth.requestMatchers(GET, "/users").hasRole(ADMIN.name());
+    auth.requestMatchers(GET, "/academic-tracks").permitAll();
+    auth.requestMatchers(PUT, "/academic-tracks").hasRole(ADMIN.name());
+    auth.requestMatchers(PUT, "/academic-tracks/{trackId}").hasRole(ADMIN.name());
 
-    auth.requestMatchers(GET, "/users/{userId}").access(selfAuthorizationManager);
+    auth.requestMatchers(GET, "/semesters").permitAll();
+    auth.requestMatchers(PUT, "/semesters").hasRole(ADMIN.name());
+
+    auth.requestMatchers(GET, "/teaching-units").permitAll();
+    auth.requestMatchers(PUT, "/teaching-units").hasRole(ADMIN.name());
+
+    auth.requestMatchers(GET, "/courses").permitAll();
+    auth.requestMatchers(GET, "/courses/{courseId}").permitAll();
+    auth.requestMatchers(GET, "/courses/{courseId}/coefficient-status").permitAll();
+    auth.requestMatchers(GET, "/teaching-units/{teachingUnitId}/courses").permitAll();
+
+    auth.requestMatchers(PUT, "/courses").hasRole(ADMIN.name());
+    auth.requestMatchers(PUT, "/courses/{courseId}").hasRole(ADMIN.name());
+    auth.requestMatchers(PUT, "/teaching-units/{teachingUnitId}/courses").hasRole(ADMIN.name());
+
+    auth.requestMatchers(GET, "/class-groups").hasAnyRole(ADMIN.name(), TEACHER.name());
+    auth.requestMatchers(PUT, "/class-groups").hasRole(ADMIN.name());
+
+    auth.requestMatchers(GET, "/academic-years").permitAll();
+    auth.requestMatchers(PUT, "/academic-years").hasRole(ADMIN.name());
+    auth.requestMatchers(PUT, "/academic-years/{academicYearId}").hasRole(ADMIN.name());
+
+    auth.requestMatchers(
+            GET, "/students/{studentId}/academic-years/{academicYearId}/group-assignment")
+        .access(selfAuthorizationManager);
+    auth.requestMatchers(
+            PUT, "/students/{studentId}/academic-years/{academicYearId}/group-assignment")
+        .hasRole(ADMIN.name());
+    auth.requestMatchers(
+            DELETE, "/students/{studentId}/academic-years/{academicYearId}/group-assignment")
+        .hasRole(ADMIN.name());
+    auth.requestMatchers(GET, "/academic-years/{academicYearId}/groups/{groupId}/students")
+        .hasAnyRole(ADMIN.name(), TEACHER.name());
+
+    auth.requestMatchers(GET, "/courses/{courseId}/academic-years/{academicYearId}/teachers")
+        .permitAll();
+    auth.requestMatchers(PUT, "/courses/{courseId}/academic-years/{academicYearId}/teachers")
+        .hasRole(ADMIN.name());
+    auth.requestMatchers(
+            DELETE, "/teachers/{teacherId}/courses/{courseId}/academic-years/{academicYearId}")
+        .hasRole(ADMIN.name());
+    auth.requestMatchers(GET, "/teachers/{teacherId}/academic-years/{academicYearId}/courses")
+        .access(selfAuthorizationManager);
   }
 
   private void gradesAndTranscriptMatchers(
       AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry auth,
       AuthorizationManager<RequestAuthorizationContext> selfAuthorizationManager) {
+
     auth.requestMatchers(GET, "/courses/{courseId}/academic-years/{academicYearId}/exams")
         .permitAll();
     auth.requestMatchers(PUT, "/courses/{courseId}/academic-years/{academicYearId}/exams")
         .hasAnyRole(TEACHER.name(), ADMIN.name());
     auth.requestMatchers(GET, "/exams/{examId}").permitAll();
+
     auth.requestMatchers(PUT, "/grades").hasAnyRole(TEACHER.name(), ADMIN.name());
     auth.requestMatchers(PATCH, "/grades/{gradeId}").hasAnyRole(TEACHER.name(), ADMIN.name());
     auth.requestMatchers(GET, "/grades/{gradeId}/history").hasAnyRole(TEACHER.name(), ADMIN.name());
