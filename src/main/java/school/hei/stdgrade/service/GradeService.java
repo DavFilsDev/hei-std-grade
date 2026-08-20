@@ -2,6 +2,7 @@ package school.hei.stdgrade.service;
 
 import static java.time.Instant.now;
 import static java.util.UUID.randomUUID;
+import static org.reflections.Reflections.log;
 
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -41,7 +42,9 @@ public class GradeService {
       throw new AccessDeniedException("You are not authorized to view these grades");
     }
 
-    return jRepository.findByStudentId(studentId).stream().map(jMapper::toDomain).toList();
+    var result = jRepository.findByStudentId(studentId).stream().map(jMapper::toDomain).toList();
+    log.info("getStudentGrades for student {} returned {} grades", studentId, result.size());
+    return result;
   }
 
   @Transactional

@@ -54,3 +54,12 @@ values ('user-admin', 'role-admin'),
        ('user-student-a', 'role-student'),
        ('user-student-b', 'role-student'),
        ('user-student-c', 'role-student');
+
+insert into "teacher_course_assignment" (teacher_id, course_id, academic_year_id)
+values ('user-teacher-a', 'course-donnees1', 'academic-year-2024');
+
+insert into "exam" (id, exam_date, coefficient, session_type, course_id, academic_year_id)
+values ('exam-test-student-a', now(), 0.5, 'REGULAR', 'course-donnees1', 'academic-year-2024');
+
+insert into "grade" (id, student_id, exam_id, score)
+values ('grade-test-student-a', 'user-student-a', 'exam-test-student-a', 14.0);

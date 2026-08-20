@@ -11,7 +11,6 @@ import org.springframework.security.web.access.intercept.RequestAuthorizationCon
 import org.springframework.stereotype.Component;
 import school.hei.stdgrade.security.model.Principal;
 
-// Adapted from cine-app: isStaff now covers TEACHER or ADMIN instead of EMPLOYEE/MANAGER.
 @Component
 public class SelfAuthorizationManager implements AuthorizationManager<RequestAuthorizationContext> {
 
@@ -25,6 +24,10 @@ public class SelfAuthorizationManager implements AuthorizationManager<RequestAut
     }
 
     var uid = context.getVariables().get("userId");
+    if (uid == null) {
+      uid = context.getVariables().get("studentId");
+    }
+
     var isStaff = principal.roles().contains(TEACHER) || principal.roles().contains(ADMIN);
     var isSelf = uid != null && uid.equals(principal.user().id());
 
