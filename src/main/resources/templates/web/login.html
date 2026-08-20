@@ -12,7 +12,7 @@
     <p th:if="${param.error}">Identifiants invalides.</p>
     <p th:if="${param.logout}">Vous avez été déconnecté.</p>
 
-    <form th:action="/web/login" method="post">
+    <form th:action="@{/web/login}" method="post">
         <label>
             Email
             <input type="text" name="username" autocomplete="username" />
