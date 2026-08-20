@@ -60,13 +60,12 @@ public class GradeCalculationService {
     }
 
     List<String> examIds = regularExams.stream().map(Exam::id).toList();
-    List<Grade> grades =
+    Map<String, Grade> gradeByExamId =
         jGradeRepository.findByStudentIdAndExamIdIn(studentId, examIds).stream()
             .map(jGradeMapper::toDomain)
-            .toList();
-
-    Map<String, Grade> gradeByExamId =
-        grades.stream().collect(groupingBy(Grade::examId)).entrySet().stream()
+            .collect(groupingBy(Grade::examId))
+            .entrySet()
+            .stream()
             .collect(
                 java.util.stream.Collectors.toMap(Map.Entry::getKey, e -> e.getValue().get(0)));
 
@@ -90,9 +89,7 @@ public class GradeCalculationService {
       return null;
     }
 
-    double rawAverage = weightedSum / coefficientSum;
-
-    return BigDecimal.valueOf(rawAverage).setScale(2, RoundingMode.HALF_UP).doubleValue();
+    return round(weightedSum / coefficientSum);
   }
 
   public Double computeFinalCourseAverage(
@@ -102,8 +99,11 @@ public class GradeCalculationService {
     if (rawAverage == null) {
       return null;
     }
-
     if (rawAverage >= 10.0) {
+      return rawAverage;
+    }
+
+    if (computeYearDecision(studentId, academicYearId) != YearDecision.PASS) {
       return rawAverage;
     }
 
@@ -128,12 +128,7 @@ public class GradeCalculationService {
     }
 
     double retakeScore = retakeGrades.get(0).score();
-
-    if (retakeScore >= 10.0) {
-      return 10.0;
-    }
-
-    return rawAverage;
+    return retakeScore >= 10.0 ? 10.0 : rawAverage;
   }
 
   public YearDecision computeYearDecision(String studentId, String academicYearId) {
@@ -142,17 +137,12 @@ public class GradeCalculationService {
     if (rawYearAverage == null) {
       return YearDecision.INCOMPLETE;
     }
-
-    if (rawYearAverage < 10.0) {
-      return YearDecision.REPEAT;
-    }
-
-    return YearDecision.PASS;
+    return rawYearAverage < 10.0 ? YearDecision.REPEAT : YearDecision.PASS;
   }
 
   public Double computeRawYearAverage(String studentId, String academicYearId) {
     User student = getUser(studentId);
-    List<Course> courses = getCoursesForStudent(student, academicYearId);
+    List<Course> courses = getCoursesOfferedInYear(student, academicYearId);
 
     double weightedSum = 0.0;
     int totalCredits = 0;
@@ -169,10 +159,7 @@ public class GradeCalculationService {
     if (totalCredits == 0) {
       return null;
     }
-
-    return BigDecimal.valueOf(weightedSum / totalCredits)
-        .setScale(2, RoundingMode.HALF_UP)
-        .doubleValue();
+    return round(weightedSum / totalCredits);
   }
 
   public Optional<AcademicYear> resolveLatestAttemptYear(String studentId, String courseId) {
@@ -200,10 +187,6 @@ public class GradeCalculationService {
             .distinct()
             .toList();
 
-    if (academicYearIds.isEmpty()) {
-      return Optional.empty();
-    }
-
     return jAcademicYearRepository.findAllById(academicYearIds).stream()
         .map(jAcademicYearMapper::toDomain)
         .max(comparing(AcademicYear::startYear));
@@ -211,13 +194,13 @@ public class GradeCalculationService {
 
   public TranscriptSummary computeTranscript(String studentId, String academicYearId) {
     User student = getUser(studentId);
-    List<Course> courses = getCoursesForStudent(student, academicYearId);
+    List<Course> courses = getCoursesOfferedInYear(student, academicYearId);
 
     boolean allCoursesFinalized =
         courses.stream()
             .allMatch(course -> examService.isCourseFinalized(course.id(), academicYearId));
 
-    boolean allExamsHaveGrades = true;
+    boolean allGradesEntered = true;
     double weightedSum = 0.0;
     int totalCredits = 0;
     int creditsEarned = 0;
@@ -225,7 +208,7 @@ public class GradeCalculationService {
     for (Course course : courses) {
       Double finalAvg = computeFinalCourseAverage(studentId, course.id(), academicYearId);
       if (finalAvg == null) {
-        allExamsHaveGrades = false;
+        allGradesEntered = false;
       } else {
         weightedSum += finalAvg * course.credits();
         if (finalAvg >= 10.0) {
@@ -235,19 +218,12 @@ public class GradeCalculationService {
       totalCredits += course.credits();
     }
 
-    TranscriptStatus status;
-    if (allCoursesFinalized && allExamsHaveGrades) {
-      status = TranscriptStatus.DEFINITIVE;
-    } else {
-      status = TranscriptStatus.PROVISIONAL;
-    }
+    var status =
+        (allCoursesFinalized && allGradesEntered)
+            ? TranscriptStatus.DEFINITIVE
+            : TranscriptStatus.PROVISIONAL;
 
-    double average =
-        totalCredits > 0
-            ? BigDecimal.valueOf(weightedSum / totalCredits)
-                .setScale(2, RoundingMode.HALF_UP)
-                .doubleValue()
-            : 0.0;
+    double average = totalCredits > 0 ? round(weightedSum / totalCredits) : 0.0;
 
     return new TranscriptSummary(studentId, academicYearId, status, average, creditsEarned);
   }
@@ -259,9 +235,7 @@ public class GradeCalculationService {
       return false;
     }
 
-    List<Course> allCourses = getAllCoursesForTrack(student.trackId());
-
-    for (Course course : allCourses) {
+    for (Course course : getAllCoursesForTrack(student.trackId())) {
       Optional<AcademicYear> latestYearOpt = resolveLatestAttemptYear(studentId, course.id());
 
       if (latestYearOpt.isEmpty()) {
@@ -269,19 +243,41 @@ public class GradeCalculationService {
       }
 
       AcademicYear latestYear = latestYearOpt.get();
-
       if (!examService.isCourseFinalized(course.id(), latestYear.id())) {
         continue;
       }
 
       Double finalAvg = computeFinalCourseAverage(studentId, course.id(), latestYear.id());
-
       if (finalAvg == null || finalAvg < 10.0) {
         return false;
       }
     }
-
     return true;
+  }
+
+  public double computeThreeYearAverage(String studentId) {
+    User student = getUser(studentId);
+    if (student.trackId() == null) {
+      return 0.0;
+    }
+
+    double weightedSum = 0.0;
+    int totalCredits = 0;
+
+    for (Course course : getAllCoursesForTrack(student.trackId())) {
+      Optional<AcademicYear> latestYearOpt = resolveLatestAttemptYear(studentId, course.id());
+      if (latestYearOpt.isEmpty()) {
+        continue;
+      }
+      Double finalAvg = computeFinalCourseAverage(studentId, course.id(), latestYearOpt.get().id());
+      if (finalAvg == null) {
+        continue;
+      }
+      weightedSum += finalAvg * course.credits();
+      totalCredits += course.credits();
+    }
+
+    return totalCredits > 0 ? round(weightedSum / totalCredits) : 0.0;
   }
 
   private User getUser(String studentId) {
@@ -291,26 +287,17 @@ public class GradeCalculationService {
         .orElseThrow(() -> new NoSuchElementException("User(id=" + studentId + ") not found"));
   }
 
-  private Course getCourse(String courseId) {
-    return jCourseRepository
-        .findById(courseId)
-        .map(jCourseMapper::toDomain)
-        .orElseThrow(() -> new NoSuchElementException("Course(id=" + courseId + ") not found"));
-  }
+  private List<Course> getCoursesOfferedInYear(User student, String academicYearId) {
+    var courseIdsWithExamsThisYear =
+        jExamRepository.findByAcademicYearId(academicYearId).stream()
+            .map(jExamMapper::toDomain)
+            .map(Exam::courseId)
+            .distinct()
+            .toList();
 
-  private AcademicYear getAcademicYear(String academicYearId) {
-    return jAcademicYearRepository
-        .findById(academicYearId)
-        .map(jAcademicYearMapper::toDomain)
-        .orElseThrow(
-            () -> new NoSuchElementException("AcademicYear(id=" + academicYearId + ") not found"));
-  }
-
-  private List<Course> getCoursesForStudent(User student, String academicYearId) {
-    String trackId = student.trackId();
-    return jCourseRepository.findAll().stream()
+    return jCourseRepository.findAllById(courseIdsWithExamsThisYear).stream()
         .map(jCourseMapper::toDomain)
-        .filter(course -> course.trackId() == null || course.trackId().equals(trackId))
+        .filter(course -> course.trackId() == null || course.trackId().equals(student.trackId()))
         .toList();
   }
 
@@ -319,6 +306,10 @@ public class GradeCalculationService {
         .map(jCourseMapper::toDomain)
         .filter(course -> course.trackId() == null || course.trackId().equals(trackId))
         .toList();
+  }
+
+  private static double round(double value) {
+    return BigDecimal.valueOf(value).setScale(2, RoundingMode.HALF_UP).doubleValue();
   }
 
   public enum YearDecision {

@@ -2,11 +2,11 @@ package school.hei.stdgrade.service;
 
 import static java.time.Instant.now;
 import static java.util.UUID.randomUUID;
-import static org.reflections.Reflections.log;
 
 import java.util.List;
 import java.util.NoSuchElementException;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +24,7 @@ import school.hei.stdgrade.service.validator.CrupdateGradeValidator;
 
 @Service
 @AllArgsConstructor
+@Slf4j
 public class GradeService {
   private final JGradeRepository jRepository;
   private final JGradeMapper jMapper;
