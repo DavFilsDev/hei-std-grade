@@ -10,6 +10,8 @@ import static school.hei.stdgrade.security.model.UserRole.ADMIN;
 import static school.hei.stdgrade.security.model.UserRole.TEACHER;
 
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -30,6 +32,7 @@ import school.hei.stdgrade.security.filter.BearerAuthFilter;
 @Configuration
 @EnableWebSecurity
 @AllArgsConstructor
+@Slf4j
 public class SecurityConf {
   private final RestAuthenticationEntryPoint entryPoint;
   private final RestAccessDeniedHandler accessDeniedHandler;
@@ -37,6 +40,14 @@ public class SecurityConf {
   @Bean
   public PasswordEncoder passwordEncoder() {
     return Argon2PasswordEncoder.defaultsForSpringSecurity_v5_8();
+  }
+
+  @Bean
+  public FilterRegistrationBean<BearerAuthFilter> disableBearerAuthFilterAutoRegistration(
+      BearerAuthFilter bearerAuthFilter) {
+    var registration = new FilterRegistrationBean<>(bearerAuthFilter);
+    registration.setEnabled(false);
+    return registration;
   }
 
   @Bean
@@ -72,6 +83,7 @@ public class SecurityConf {
             auth -> {
               auth.requestMatchers("/error").permitAll();
               auth.requestMatchers("/login", "/ping").permitAll();
+              auth.requestMatchers(GET, "/css/**").permitAll(); // static assets for /web/** pages
               identityAndAcademicStructureMatchers(auth, selfAuthorizationManager); // Dev 1
               gradesAndTranscriptMatchers(auth, selfAuthorizationManager); // Dev 2
               auth.anyRequest().authenticated();

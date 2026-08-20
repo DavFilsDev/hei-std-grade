@@ -14,8 +14,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import school.hei.stdgrade.security.jwt.JwtService;
 
-// Copied as-is from cine-app: no adaptation needed. Depends on UserDetailsService, implemented by
-// UserService.loadUserByUsername (Task 1.1) — this class compiles standalone before that exists.
 @Component
 @AllArgsConstructor
 public class BearerAuthFilter extends OncePerRequestFilter {
